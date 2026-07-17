@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface GoogleAccount {
@@ -23,14 +23,32 @@ function GoogleOAuthContent() {
   const [manualName, setManualName] = useState('');
   const [manualEmail, setManualEmail] = useState('');
 
-  const googleAccounts: GoogleAccount[] = [
-    { name: 'Umesh Choudhary', email: 'umeshchoudhary.wovvtech@gmail.com', avatarText: 'U', avatarBg: 'bg-emerald-700' },
-    { name: 'Umesh Kr', email: 'uk.digi098@gmail.com', avatarText: 'U', avatarBg: 'bg-pink-700' },
-    { name: 'Umesh Kr', email: 'ukumar06542@gmail.com', avatarText: 'U', avatarBg: 'bg-amber-800' },
-    { name: 'Umesh Kr', email: 'superstar8271@gmail.com', avatarText: 'U', avatarBg: 'bg-rose-700' },
-    { name: 'Umesh Choudhary', email: 'uraj06542@gmail.com', avatarText: 'U', avatarBg: 'bg-teal-700' },
-    { name: 'Umesh Choudhary', email: 'mail.umeshchoudhary@gmail.com', avatarText: 'U', avatarBg: 'bg-green-900' },
-  ];
+  const [googleAccounts, setGoogleAccounts] = useState<GoogleAccount[]>([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('google_oauth_accounts');
+    if (saved) {
+      setGoogleAccounts(JSON.parse(saved));
+    } else {
+      // In localhost, pre-populate with the mock demo accounts for easy developer testing.
+      // In production (Vercel), start with an empty list so it behaves like a fresh device!
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (isLocal) {
+        const defaultList: GoogleAccount[] = [
+          { name: 'Umesh Choudhary', email: 'umeshchoudhary.wovvtech@gmail.com', avatarText: 'U', avatarBg: 'bg-emerald-700' },
+          { name: 'Umesh Kr', email: 'uk.digi098@gmail.com', avatarText: 'U', avatarBg: 'bg-pink-700' },
+          { name: 'Umesh Kr', email: 'ukumar06542@gmail.com', avatarText: 'U', avatarBg: 'bg-amber-800' },
+          { name: 'Umesh Kr', email: 'superstar8271@gmail.com', avatarText: 'U', avatarBg: 'bg-rose-700' },
+          { name: 'Umesh Choudhary', email: 'uraj06542@gmail.com', avatarText: 'U', avatarBg: 'bg-teal-700' },
+          { name: 'Umesh Choudhary', email: 'mail.umeshchoudhary@gmail.com', avatarText: 'U', avatarBg: 'bg-green-900' },
+        ];
+        setGoogleAccounts(defaultList);
+        localStorage.setItem('google_oauth_accounts', JSON.stringify(defaultList));
+      } else {
+        setGoogleAccounts([]);
+      }
+    }
+  }, []);
 
   const handleAccountSelect = (acc: GoogleAccount) => {
     setSelectedAccount(acc);
@@ -62,6 +80,23 @@ function GoogleOAuthContent() {
       const data = await res.json();
 
       if (res.ok) {
+        // Save account to localStorage for device specificity!
+        const saved = localStorage.getItem('google_oauth_accounts');
+        let currentList: GoogleAccount[] = saved ? JSON.parse(saved) : [];
+        const exists = currentList.some(acc => acc.email.toLowerCase() === selectedAccount.email.toLowerCase());
+        if (!exists) {
+          const avatarColors = ['bg-emerald-700', 'bg-pink-700', 'bg-amber-800', 'bg-rose-700', 'bg-teal-700', 'bg-green-900'];
+          const randomColor = avatarColors[Math.floor(Math.random() * avatarColors.length)];
+          const newAccount: GoogleAccount = {
+            name: selectedAccount.name,
+            email: selectedAccount.email,
+            avatarText: selectedAccount.name.charAt(0).toUpperCase(),
+            avatarBg: randomColor
+          };
+          currentList.push(newAccount);
+          localStorage.setItem('google_oauth_accounts', JSON.stringify(currentList));
+        }
+
         if (data.role === 'admin') {
           router.push('/admin');
         } else {
@@ -81,7 +116,18 @@ function GoogleOAuthContent() {
     <div className="min-h-screen bg-[#0f0f0f] text-[#e3e3e3] flex flex-col items-center justify-between p-6 select-none font-sans">
       <div className="flex-1 flex items-center justify-center w-full max-w-[1040px]">
         {/* Main Card Container */}
-        <div className="bg-[#1f1f1f] w-full rounded-[28px] p-10 flex flex-col md:flex-row gap-8 shadow-2xl min-h-[460px]">
+        <div className="bg-[#1f1f1f] w-full rounded-[28px] p-10 flex flex-col md:flex-row gap-8 shadow-2xl min-h-[460px] relative">
+          
+          {/* Close button to return to login page */}
+          <button
+            onClick={() => router.push('/login')}
+            className="absolute top-6 right-6 p-2 rounded-full hover:bg-[#2d2d2d] text-[#c4c7c5] hover:text-white transition-colors cursor-pointer z-20"
+            title="Go back to login"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
           
           {/* LEFT COLUMN: Google brand branding */}
           <div className="flex-1 flex flex-col justify-between text-left">
@@ -169,6 +215,12 @@ function GoogleOAuthContent() {
                       </div>
                     </div>
                   ))}
+
+                  {googleAccounts.length === 0 && (
+                    <div className="py-4 text-center text-xs text-[#909090]">
+                      No Google accounts linked on this device yet.
+                    </div>
+                  )}
 
                   {/* Use another account option */}
                   <div

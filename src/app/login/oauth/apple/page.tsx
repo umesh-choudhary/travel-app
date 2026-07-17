@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 
 function AppleOAuthContent() {
@@ -9,17 +9,46 @@ function AppleOAuthContent() {
   const [oauthLoading, setOauthLoading] = useState(false);
   const [oauthError, setOauthError] = useState('');
 
-  const account = {
-    name: 'Umesh Choudhary',
-    email: 'umeshchoudhary.wovvtech@gmail.com',
-  };
+  const [account, setAccount] = useState<{ name: string; email: string } | null>(null);
+  const [inputName, setInputName] = useState('');
+  const [inputEmail, setInputEmail] = useState('');
+  const [showInputForm, setShowInputForm] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('apple_oauth_account');
+    if (saved) {
+      setAccount(JSON.parse(saved));
+    } else {
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (isLocal) {
+        const defaultAcc = {
+          name: 'Umesh Choudhary',
+          email: 'umeshchoudhary.wovvtech@gmail.com',
+        };
+        setAccount(defaultAcc);
+        localStorage.setItem('apple_oauth_account', JSON.stringify(defaultAcc));
+      } else {
+        setShowInputForm(true);
+      }
+    }
+  }, []);
 
   const handleContinue = async () => {
+    let activeAccount = account;
+    if (showInputForm) {
+      if (!inputName || !inputEmail) {
+        setOauthError('Please enter both name and email');
+        return;
+      }
+      activeAccount = { name: inputName, email: inputEmail };
+    }
+
+    if (!activeAccount) return;
     setOauthLoading(true);
     setOauthError('');
 
     const finalEmail = emailMode === 'share' 
-      ? account.email 
+      ? activeAccount.email 
       : 'umesh_relay_9872@privaterelay.appleid.com';
 
     try {
@@ -28,7 +57,7 @@ function AppleOAuthContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           provider: 'apple',
-          name: account.name,
+          name: activeAccount.name,
           email: finalEmail,
         }),
       });
@@ -36,6 +65,9 @@ function AppleOAuthContent() {
       const data = await res.json();
 
       if (res.ok) {
+        // Save to localStorage for device specificity!
+        localStorage.setItem('apple_oauth_account', JSON.stringify(activeAccount));
+
         if (data.role === 'admin') {
           router.push('/admin');
         } else {
@@ -55,8 +87,19 @@ function AppleOAuthContent() {
     <div className="min-h-screen bg-black text-[#e3e3e3] flex flex-col items-center justify-between p-6 select-none font-sans">
       <div className="flex-1 flex items-center justify-center w-full max-w-[1040px]">
         {/* Main Card Container */}
-        <div className="bg-[#1c1c1e] w-full rounded-[28px] p-10 flex flex-col md:flex-row gap-8 shadow-2xl min-h-[460px] border border-[#2c2c2e]">
+        <div className="bg-[#1c1c1e] w-full rounded-[28px] p-10 flex flex-col md:flex-row gap-8 shadow-2xl min-h-[460px] border border-[#2c2c2e] relative">
           
+          {/* Close button to return to login page */}
+          <button
+            onClick={() => router.push('/login')}
+            className="absolute top-6 right-6 p-2 rounded-full hover:bg-[#2c2c2e] text-[#a1a1a6] hover:text-white transition-colors cursor-pointer z-20"
+            title="Go back to login"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
           {/* LEFT COLUMN: Apple brand branding */}
           <div className="flex-1 flex flex-col justify-between text-left">
             <div>
@@ -85,57 +128,88 @@ function AppleOAuthContent() {
 
           {/* RIGHT COLUMN: Account details & Consent selection */}
           <div className="flex-[1.2] flex flex-col justify-center text-left min-w-0">
-            <div className="space-y-6 w-full">
+            <div className="space-y-6 w-full animate-in fade-in duration-200">
               
-              {/* Account Details Box */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between py-2.5 border-b border-[#2c2c2e] text-[14px]">
-                  <span className="text-[#86868b]">Apple ID</span>
-                  <span className="font-semibold text-white">{account.email}</span>
-                </div>
-
-                <div className="flex items-center justify-between py-2.5 border-b border-[#2c2c2e] text-[14px]">
-                  <span className="text-[#86868b]">Name</span>
-                  <span className="font-semibold text-white">{account.name}</span>
-                </div>
-              </div>
-
-              {/* Email Sharing Choice Option */}
-              <div className="space-y-3">
-                <p className="text-[12px] font-bold text-[#86868b] uppercase tracking-wider">Email Address</p>
-                
-                <div className="space-y-2">
-                  {/* Option 1: Share Email */}
-                  <label className="flex items-start gap-4 p-3 rounded-xl border border-[#2c2c2e] bg-[#151516] hover:bg-[#252526] cursor-pointer transition-colors">
+              {showInputForm ? (
+                /* Manual Input Form */
+                <div className="space-y-4">
+                  <h3 className="text-lg font-bold text-white mb-2">Enter Apple ID Credentials</h3>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#86868b] mb-2 uppercase tracking-wider">Full Name</label>
                     <input
-                      type="radio"
-                      name="appleEmail"
-                      checked={emailMode === 'share'}
-                      onChange={() => setEmailMode('share')}
-                      className="mt-1 text-indigo-500 focus:ring-0"
+                      type="text"
+                      required
+                      value={inputName}
+                      onChange={(e) => setInputName(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-lg bg-[#151516] border border-[#2c2c2e] focus:border-white outline-none text-sm text-white placeholder-[#48484a]"
+                      placeholder="e.g. Umesh Choudhary"
                     />
-                    <div>
-                      <p className="text-xs text-white font-semibold">Share My Email</p>
-                      <p className="text-[11px] text-[#86868b] mt-0.5">{account.email}</p>
-                    </div>
-                  </label>
-
-                  {/* Option 2: Hide Email */}
-                  <label className="flex items-start gap-4 p-3 rounded-xl border border-[#2c2c2e] bg-[#151516] hover:bg-[#252526] cursor-pointer transition-colors">
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#86868b] mb-2 uppercase tracking-wider">Apple ID (Email)</label>
                     <input
-                      type="radio"
-                      name="appleEmail"
-                      checked={emailMode === 'hide'}
-                      onChange={() => setEmailMode('hide')}
-                      className="mt-1 text-indigo-500 focus:ring-0"
+                      type="email"
+                      required
+                      value={inputEmail}
+                      onChange={(e) => setInputEmail(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-lg bg-[#151516] border border-[#2c2c2e] focus:border-white outline-none text-sm text-white placeholder-[#48484a]"
+                      placeholder="name@example.com"
                     />
-                    <div>
-                      <p className="text-xs text-white font-semibold">Hide My Email</p>
-                      <p className="text-[11px] text-[#86868b] mt-0.5">umesh_relay_9872@privaterelay.appleid.com</p>
-                    </div>
-                  </label>
+                  </div>
                 </div>
-              </div>
+              ) : account ? (
+                /* Account Details Box */
+                <>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between py-2.5 border-b border-[#2c2c2e] text-[14px]">
+                      <span className="text-[#86868b]">Apple ID</span>
+                      <span className="font-semibold text-white">{account.email}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between py-2.5 border-b border-[#2c2c2e] text-[14px]">
+                      <span className="text-[#86868b]">Name</span>
+                      <span className="font-semibold text-white">{account.name}</span>
+                    </div>
+                  </div>
+
+                  {/* Email Sharing Choice Option */}
+                  <div className="space-y-3">
+                    <p className="text-[12px] font-bold text-[#86868b] uppercase tracking-wider">Email Address</p>
+                    
+                    <div className="space-y-2">
+                      {/* Option 1: Share Email */}
+                      <label className="flex items-start gap-4 p-3 rounded-xl border border-[#2c2c2e] bg-[#151516] hover:bg-[#252526] cursor-pointer transition-colors">
+                        <input
+                          type="radio"
+                          name="appleEmail"
+                          checked={emailMode === 'share'}
+                          onChange={() => setEmailMode('share')}
+                          className="mt-1 text-indigo-500 focus:ring-0"
+                        />
+                        <div>
+                          <p className="text-xs text-white font-semibold">Share My Email</p>
+                          <p className="text-[11px] text-[#86868b] mt-0.5">{account.email}</p>
+                        </div>
+                      </label>
+
+                      {/* Option 2: Hide Email */}
+                      <label className="flex items-start gap-4 p-3 rounded-xl border border-[#2c2c2e] bg-[#151516] hover:bg-[#252526] cursor-pointer transition-colors">
+                        <input
+                          type="radio"
+                          name="appleEmail"
+                          checked={emailMode === 'hide'}
+                          onChange={() => setEmailMode('hide')}
+                          className="mt-1 text-indigo-500 focus:ring-0"
+                        />
+                        <div>
+                          <p className="text-xs text-white font-semibold">Hide My Email</p>
+                          <p className="text-[11px] text-[#86868b] mt-0.5">umesh_relay_9872@privaterelay.appleid.com</p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </>
+              ) : null}
 
               <p className="text-[11px] text-[#86868b] leading-relaxed">
                 By continuing, Apple will share your name and choice of email with TravelApp to set up your account.
