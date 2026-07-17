@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import LogoutButton from '../LogoutButton';
 import NewTravel from '../users/[id]/AddNewTravel';
@@ -33,12 +33,19 @@ export default function SidebarWrapper({
   user: User;
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNewTripOpen, setIsNewTripOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>('dark');
 
   const pathname = usePathname();
+
+  const handleLogout = async () => {
+    await fetch('/api/auth', { method: 'DELETE' });
+    router.push('/login');
+    router.refresh();
+  };
 
   useEffect(() => {
     const theme = localStorage.getItem('theme') as 'light' | 'dark' || 'dark';
@@ -181,18 +188,23 @@ export default function SidebarWrapper({
         <span className="text-xl font-bold bg-gradient-to-r from-accent-color to-cyan-400 bg-clip-text text-transparent">
           TravelApp
         </span>
+        
+        {/* Quick Theme Switcher on Mobile Header */}
         <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-tertiary transition-colors"
-          aria-label="Toggle menu"
+          onClick={toggleTheme}
+          type="button"
+          className="p-2 rounded-xl border border-border-primary bg-bg-primary hover:bg-bg-tertiary text-text-secondary hover:text-text-primary transition-all duration-200"
+          title="Toggle Light/Dark Theme"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            {isMobileMenuOpen ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
+          {currentTheme === 'dark' ? (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+          )}
         </button>
       </header>
 
@@ -201,23 +213,72 @@ export default function SidebarWrapper({
         {sidebarContent}
       </aside>
 
-      {/* Mobile Drawer (Collapsible) */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-40 flex">
-          {/* Backdrop overlay */}
-          <div
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-          />
-          {/* Sidebar Panel */}
-          <aside className="relative flex flex-col w-64 h-full bg-bg-secondary p-6 border-r border-border-primary animate-in slide-in-from-left duration-300">
-            {sidebarContent}
-          </aside>
-        </div>
-      )}
+      {/* Mobile Sticky Bottom Tab Bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-bg-secondary/90 backdrop-blur-md border-t border-border-primary h-16 flex items-center justify-around pb-safe shadow-lg">
+        {/* Tab 1: Dashboard */}
+        <Link
+          href="/dashboard"
+          className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-[10px] font-bold tracking-tight transition-colors ${
+            pathname === '/dashboard' ? 'text-accent-color' : 'text-text-secondary'
+          }`}
+        >
+          <svg className="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          <span>Dashboard</span>
+        </Link>
+
+        {/* Tab 2: Search Groups */}
+        <Link
+          href="/dashboard/groups"
+          className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-[10px] font-bold tracking-tight transition-colors ${
+            pathname === '/dashboard/groups' ? 'text-accent-color' : 'text-text-secondary'
+          }`}
+        >
+          <svg className="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L16 4m0 13V4m0 0L9 7" />
+          </svg>
+          <span>Search</span>
+        </Link>
+
+        {/* Tab 3: New Trip (Center Float) */}
+        <button
+          onClick={() => setIsNewTripOpen(true)}
+          className="flex flex-col items-center justify-center flex-1 h-full py-1 text-[10px] font-bold tracking-tight text-text-secondary hover:text-accent-color cursor-pointer"
+        >
+          <div className="w-10 h-10 rounded-full bg-accent-color text-white flex items-center justify-center shadow-lg -mt-5 border-4 border-bg-secondary hover:scale-105 active:scale-95 transition-all">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
+            </svg>
+          </div>
+          <span className="mt-0.5">New Trip</span>
+        </button>
+
+        {/* Tab 4: Profile Settings */}
+        <button
+          onClick={() => setIsProfileOpen(true)}
+          className="flex flex-col items-center justify-center flex-1 h-full py-1 text-[10px] font-bold tracking-tight text-text-secondary hover:text-accent-color cursor-pointer"
+        >
+          <svg className="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <span>Profile</span>
+        </button>
+
+        {/* Tab 5: Logout */}
+        <button
+          onClick={handleLogout}
+          className="flex flex-col items-center justify-center flex-1 h-full py-1 text-[10px] font-bold tracking-tight text-text-secondary hover:text-red-400 cursor-pointer"
+        >
+          <svg className="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          <span>Exit</span>
+        </button>
+      </div>
 
       {/* Main Content Area */}
-      <div className="pl-0 md:pl-64 pt-16 md:pt-0 min-h-screen flex flex-col justify-between">
+      <div className="pl-0 md:pl-64 pt-16 pb-20 md:pb-0 md:pt-0 min-h-screen flex flex-col justify-between">
         <div className="flex-1">{children}</div>
       </div>
 
