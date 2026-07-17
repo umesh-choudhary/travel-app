@@ -57,6 +57,16 @@ function LoginContent() {
     setSuccessMsg('');
   };
 
+  const handleGoogleLogin = () => {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    const redirectUri = encodeURIComponent(window.location.origin + '/api/auth/callback/google');
+    const scope = encodeURIComponent('openid email profile');
+    const responseType = 'code';
+    
+    // Redirect the browser to Google's official OAuth authorization endpoint
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=${responseType}&scope=${scope}`;
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -295,7 +305,7 @@ function LoginContent() {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => router.push('/login/oauth/google')}
+                  onClick={handleGoogleLogin}
                   className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-bg-primary hover:bg-bg-tertiary text-text-primary border border-border-primary transition-all font-semibold text-xs hover:scale-[1.01] cursor-pointer"
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
