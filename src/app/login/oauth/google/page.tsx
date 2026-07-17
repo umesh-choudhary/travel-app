@@ -30,25 +30,27 @@ function GoogleOAuthContent() {
     if (saved) {
       setGoogleAccounts(JSON.parse(saved));
     } else {
-      // In localhost, pre-populate with the mock demo accounts for easy developer testing.
-      // In production (Vercel), start with an empty list so it behaves like a fresh device!
-      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      if (isLocal) {
-        const defaultList: GoogleAccount[] = [
-          { name: 'Umesh Choudhary', email: 'umeshchoudhary.wovvtech@gmail.com', avatarText: 'U', avatarBg: 'bg-emerald-700' },
-          { name: 'Umesh Kr', email: 'uk.digi098@gmail.com', avatarText: 'U', avatarBg: 'bg-pink-700' },
-          { name: 'Umesh Kr', email: 'ukumar06542@gmail.com', avatarText: 'U', avatarBg: 'bg-amber-800' },
-          { name: 'Umesh Kr', email: 'superstar8271@gmail.com', avatarText: 'U', avatarBg: 'bg-rose-700' },
-          { name: 'Umesh Choudhary', email: 'uraj06542@gmail.com', avatarText: 'U', avatarBg: 'bg-teal-700' },
-          { name: 'Umesh Choudhary', email: 'mail.umeshchoudhary@gmail.com', avatarText: 'U', avatarBg: 'bg-green-900' },
-        ];
-        setGoogleAccounts(defaultList);
-        localStorage.setItem('google_oauth_accounts', JSON.stringify(defaultList));
-      } else {
-        setGoogleAccounts([]);
-      }
+      // Pre-populate with the mock demo accounts for easy testing on any device.
+      // Users can prune/remove accounts to configure device-specific lists!
+      const defaultList: GoogleAccount[] = [
+        { name: 'Umesh Choudhary', email: 'umeshchoudhary.wovvtech@gmail.com', avatarText: 'U', avatarBg: 'bg-emerald-700' },
+        { name: 'Umesh Kr', email: 'uk.digi098@gmail.com', avatarText: 'U', avatarBg: 'bg-pink-700' },
+        { name: 'Umesh Kr', email: 'ukumar06542@gmail.com', avatarText: 'U', avatarBg: 'bg-amber-800' },
+        { name: 'Umesh Kr', email: 'superstar8271@gmail.com', avatarText: 'U', avatarBg: 'bg-rose-700' },
+        { name: 'Umesh Choudhary', email: 'uraj06542@gmail.com', avatarText: 'U', avatarBg: 'bg-teal-700' },
+        { name: 'Umesh Choudhary', email: 'mail.umeshchoudhary@gmail.com', avatarText: 'U', avatarBg: 'bg-green-900' },
+      ];
+      setGoogleAccounts(defaultList);
+      localStorage.setItem('google_oauth_accounts', JSON.stringify(defaultList));
     }
   }, []);
+
+  const handleRemoveAccount = (emailToRemove: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = googleAccounts.filter(acc => acc.email.toLowerCase() !== emailToRemove.toLowerCase());
+    setGoogleAccounts(updated);
+    localStorage.setItem('google_oauth_accounts', JSON.stringify(updated));
+  };
 
   const handleAccountSelect = (acc: GoogleAccount) => {
     setSelectedAccount(acc);
@@ -195,7 +197,7 @@ function GoogleOAuthContent() {
                     <div
                       key={idx}
                       onClick={() => handleAccountSelect(acc)}
-                      className="flex items-center gap-4 py-3 px-2 hover:bg-[#2d2d2d] cursor-pointer transition-colors duration-150 first:pt-0"
+                      className="flex items-center gap-4 py-3 px-2 hover:bg-[#2d2d2d] cursor-pointer transition-colors duration-150 first:pt-0 group/row"
                     >
                       {/* Avatar */}
                       {acc.avatarImg ? (
@@ -213,6 +215,17 @@ function GoogleOAuthContent() {
                         <p className="text-[14px] font-medium text-white truncate">{acc.name}</p>
                         <p className="text-[12px] text-[#909090] truncate">{acc.email}</p>
                       </div>
+
+                      {/* Remove account option */}
+                      <button
+                        onClick={(e) => handleRemoveAccount(acc.email, e)}
+                        className="opacity-0 group-hover/row:opacity-100 p-1.5 rounded-lg hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition-all cursor-pointer z-10"
+                        title="Remove account from this device"
+                      >
+                        <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     </div>
                   ))}
 

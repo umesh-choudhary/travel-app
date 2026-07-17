@@ -13,25 +13,34 @@ function AppleOAuthContent() {
   const [inputName, setInputName] = useState('');
   const [inputEmail, setInputEmail] = useState('');
   const [showInputForm, setShowInputForm] = useState(false);
+  const [hasSavedAccount, setHasSavedAccount] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('apple_oauth_account');
     if (saved) {
       setAccount(JSON.parse(saved));
+      setHasSavedAccount(true);
     } else {
-      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      if (isLocal) {
-        const defaultAcc = {
-          name: 'Umesh Choudhary',
-          email: 'umeshchoudhary.wovvtech@gmail.com',
-        };
-        setAccount(defaultAcc);
-        localStorage.setItem('apple_oauth_account', JSON.stringify(defaultAcc));
-      } else {
-        setShowInputForm(true);
-      }
+      // Pre-populate with default Apple account for testing.
+      // Users can sign out from the device to log in/set a different Apple ID!
+      const defaultAcc = {
+        name: 'Umesh Choudhary',
+        email: 'umeshchoudhary.wovvtech@gmail.com',
+      };
+      setAccount(defaultAcc);
+      setHasSavedAccount(true);
+      localStorage.setItem('apple_oauth_account', JSON.stringify(defaultAcc));
     }
   }, []);
+
+  const handleSignOutApple = () => {
+    localStorage.removeItem('apple_oauth_account');
+    setAccount(null);
+    setHasSavedAccount(false);
+    setInputName('');
+    setInputEmail('');
+    setShowInputForm(true);
+  };
 
   const handleContinue = async () => {
     let activeAccount = account;
@@ -208,6 +217,17 @@ function AppleOAuthContent() {
                       </label>
                     </div>
                   </div>
+
+                  {/* Account Switcher option */}
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={handleSignOutApple}
+                      className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold hover:underline cursor-pointer bg-transparent border-none"
+                    >
+                      Use another Apple ID
+                    </button>
+                  </div>
                 </>
               ) : null}
 
@@ -220,10 +240,25 @@ function AppleOAuthContent() {
               )}
 
               <div className="flex gap-3 pt-3 border-t border-[#2c2c2e] justify-end">
+                {showInputForm && hasSavedAccount && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const saved = localStorage.getItem('apple_oauth_account');
+                      if (saved) {
+                        setAccount(JSON.parse(saved));
+                        setShowInputForm(false);
+                      }
+                    }}
+                    className="px-6 py-2 rounded-full border border-[#48484a] hover:bg-[#2c2c2e] text-[14px] text-white font-medium transition-colors cursor-pointer"
+                  >
+                    Back
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => router.push('/login')}
-                  className="px-6 py-2 rounded-full border border-[#48484a] hover:bg-[#2c2c2e] text-[14px] text-white font-medium transition-colors"
+                  className="px-6 py-2 rounded-full border border-[#48484a] hover:bg-[#2c2c2e] text-[14px] text-white font-medium transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -231,7 +266,7 @@ function AppleOAuthContent() {
                   type="button"
                   disabled={oauthLoading}
                   onClick={handleContinue}
-                  className="px-6 py-2 rounded-full bg-white hover:bg-[#e3e3e3] text-[14px] text-black font-semibold transition-colors flex items-center justify-center min-w-[100px]"
+                  className="px-6 py-2 rounded-full bg-white hover:bg-[#e3e3e3] text-[14px] text-black font-semibold transition-colors flex items-center justify-center min-w-[100px] cursor-pointer"
                 >
                   {oauthLoading ? 'Signing in...' : 'Continue'}
                 </button>
